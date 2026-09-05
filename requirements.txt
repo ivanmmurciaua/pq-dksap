@@ -1,0 +1,12 @@
+requests
+rlp
+eth-keys
+eth-utils
+eth-abi
+pycryptodome
+numpy
+
+# The ML-DSA (Dilithium2) ETH-variant signer is the ZKNox reference. It is not on
+# PyPI; install both from source (see README "Setup"):
+#   pip install "polyntt @ git+https://github.com/ZKNoxHQ/NTT.git@main#subdirectory=assets/pythonref/"
+#   pip install --no-deps "git+https://github.com/ZKNoxHQ/ETHDILITHIUM.git#subdirectory=pythonref"
