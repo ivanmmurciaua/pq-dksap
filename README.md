@@ -109,6 +109,15 @@ This repo is the **on-chain spend engine** of a post-quantum stealth-payment sys
 
 **Consequence:** here the recipient generates the stealth key and the payer is handed the address (an interactive shortcut), so this demonstrates the **spend mechanism**, not the unlinkable non-interactive payment. The missing key-agreement layer (*blinded ML-DSA* over ML-KEM: the payer computes the address, only the recipient can spend, and the two are unlinkable) is real work that already exists in the pq-sap project (see Acknowledgments) and plugs on top of this exact machinery without changing it.
 
+### Recoverability
+
+Funds sit at the stealth account (a contract), not at a "Bob address". To move them Bob must produce a blinded ML-DSA signature the on-chain verifier accepts, which needs **two** inputs:
+
+- **Bob's master seed** — the one secret behind `(s1, s2, kem_dk)`, shared across every payment; `bob-sweep` reconstructs the spending material from it.
+- **that payment's ML-KEM ciphertext** (the announcement) — without it Bob cannot recover the shared secret, so he cannot form the blinded key for that specific stealth account.
+
+So the value is fully recoverable from `seed + ciphertext`; only gas is spent and not recovered. The catch: this PoC delivers the ciphertext **off-chain** (a file). If Bob loses it and there is no on-chain record, the funds are **stuck** — the seed alone is not enough. Making the ciphertext durable (Bob rescans and recovers with his seed only) is exactly what the on-chain Announcer / registry / scanning layer provides; it is left as future work, not discarded. The sweep lands at Bob's payout wallet, whose key `bob-init` stores in the private secret file so Bob controls it.
+
 Testnet only. Not audited. Not for production.
 
 ## Acknowledgments
