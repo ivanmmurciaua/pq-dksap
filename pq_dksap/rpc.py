@@ -53,6 +53,37 @@ def estimate_gas(call):
     return to_int(rpc("eth_estimateGas", [call]))
 
 
+def gas_price():
+    """The node's suggested gas price (base fee + a typical priority)."""
+    return to_int(rpc("eth_gasPrice"))
+
+
+def base_fee():
+    """The latest block's base fee per gas (0 if the chain does not expose it)."""
+    b = rpc("eth_getBlockByNumber", ["latest", False]).get("baseFeePerGas")
+    return to_int(b) if b else 0
+
+
+def max_priority_fee():
+    """The node's suggested priority fee (often conservative / inflated)."""
+    try:
+        return to_int(rpc("eth_maxPriorityFeePerGas"))
+    except RpcError:
+        return 0
+
+
+def recent_priority():
+    """The priority fee recent blocks actually paid (50th-pct reward over the last
+    few blocks), i.e. what it really takes to be included right now. 0 on an idle
+    chain that mines at the base fee."""
+    try:
+        h = rpc("eth_feeHistory", ["0x5", "latest", [50]])
+        rewards = [to_int(r[0]) for r in h.get("reward", []) if r]
+        return max(rewards) if rewards else 0
+    except (RpcError, KeyError, IndexError, ValueError):
+        return 0
+
+
 def eth_call(call, block="latest"):
     return rpc("eth_call", [call, block])
 

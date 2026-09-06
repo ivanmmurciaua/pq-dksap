@@ -39,7 +39,7 @@ from eth_keys import keys
 from eth_utils import keccak
 
 from pq_dksap import dksap, rpc, stealth
-from pq_dksap.config import CHAIN_ID, SINGLETON
+from pq_dksap.config import CHAIN_ID, FACTORY, SINGLETON
 
 ETH = 10 ** 18
 STATE_FILE = ".pqstate.json"
@@ -292,6 +292,78 @@ def cmd_auto(args):
 
 
 # --------------------------------------------------------------------------
+# Counterfactual (CREATE2) flow: Alice funds a predictable address and walks
+# away; Bob collects with a single self-paid deploy+sweep 0x06 tx (no gas of
+# his own). This is the flow a QR/scan UI needs.
+# --------------------------------------------------------------------------
+def cmd_factory_deploy(args):
+    alice_hex, alice = load_alice()
+    rule("Deploy the CREATE2 factory (one-time)")
+    addr, rc = stealth.deploy_factory(alice_hex, alice)
+    if not rc or rc.get("status") != "0x1":
+        sys.exit(f"  factory deploy failed: {rc}")
+    print(f"  factory       : {addr}")
+    print(f"    deploy gas    : {int(rc.get('gasUsed'),16):,}   block {int(rc.get('blockNumber'),16)}")
+    print(f"\n  Reuse it: export PQ_FACTORY={addr}")
+    return 0
+
+
+def cmd_cf(args):
+    factory = args.factory or FACTORY
+    if not factory:
+        sys.exit("No factory. Run `python demo.py factory-deploy`, then set $PQ_FACTORY "
+                 "(or pass --factory 0x...).")
+    alice_hex, alice = load_alice()
+    seed = bytes.fromhex(args.seed) if args.seed else secrets.token_bytes(32)
+    bob_wallet = fresh_eoa()
+    meta_pub, meta_sec = dksap.gen_meta(seed)
+    meta_alice = dksap.MetaPublic.decode(meta_pub.encode())
+
+    rule("cast (counterfactual)")
+    print(f"  network      : ethrex Hegota privacy testnet  (chain {CHAIN_ID} / {hex(CHAIN_ID)})")
+    print(f"  Alice (payer): {alice}   {eth(rpc.get_balance(alice))}")
+    print(f"  Bob (wallet) : {bob_wallet}   [freshly generated]")
+    print(f"  factory      : {factory}   [CREATE2 deployer]")
+
+    tgt = dksap.sender_derive(meta_alice)
+    account = stealth.predict_stealth_address(factory, tgt.commit)
+    endow = args.amount + args.gas_allowance
+    if rpc.get_balance(alice) < endow + 10 ** 16:
+        sys.exit("Alice's balance is too low. Top up at the faucet.")
+
+    rule("1. Alice predicts Bob's stealth address (before it exists) and funds it")
+    print(f"  stealth addr  : {account}   [CREATE2, no code yet: {len(rpc.get_code(account))//2 - 1} B]")
+    print(f"  Alice sends {eth(endow)} with a plain transfer (no deploy), then walks away.")
+    rc = stealth.fund_address(alice_hex, alice, account, endow)
+    if not rc or rc.get("status") != "0x1":
+        sys.exit(f"  funding failed: {rc}")
+    print(f"    funded: holds {eth(rpc.get_balance(account))}   block {int(rc.get('blockNumber'),16)}")
+
+    rule("2. Bob collects: ONE self-paid tx deploys the account AND sweeps")
+    bkey = dksap.recipient_recover(meta_pub, meta_sec, tgt.kem_ct, view_tag=tgt.view_tag)
+    assert bkey.commit == tgt.commit and stealth.predict_stealth_address(factory, bkey.commit) == account
+    tx = stealth.build_deploy_spend(factory, account, tgt.commit, bob_wallet, args.amount)
+    h = dksap.authorize(tx, bkey)
+    sig = tx.signatures[0].signature[len(bkey.pk_deploy):]
+    dret = sanity_verifier(bkey.pk_deploy, sig, h)
+    print(f"  deploy+verify+send in one 0x06; Bob pays NO gas (the stealth self-pays).")
+    print(f"    verifier      : verifyInline -> {dret}  ({'valid' if dret == '0x024ad318' else 'INVALID'})")
+    txh = rpc.send_raw(tx.encode_hex())
+    print(f"  tx sent       : {txh}", flush=True)
+    print(f"    waiting for a block ...", flush=True)
+    rc = stealth._wait(txh, timeout=SWEEP_WAIT)
+    if not rc:
+        print(f"  not confirmed within {SWEEP_WAIT}s; the funds sit safely at {account}.")
+        return 2
+    if rc.get("status") != "0x1":
+        print(f"    reverted: status {rc.get('status')}  gas {int(rc.get('gasUsed'),16):,}  block {int(rc.get('blockNumber'),16)}")
+        print(f"    (if the validation prefix rejected it, the deploy exceeded MAX_VERIFY_GAS; tune build_deploy_spend)")
+        return 1
+    print(f"    code now at stealth: {len(rpc.get_code(account))//2 - 1} B")
+    return report(bob_wallet, account, rc)
+
+
+# --------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser(description="Post-quantum dual-key stealth payment (Alice -> Bob).")
     sub = ap.add_subparsers(dest="cmd")
@@ -320,6 +392,13 @@ def main():
     bs.add_argument("--ann", default=ANN_FILE, help="announcement file from Alice")
     bs.add_argument("--secret", default=SECRET_FILE, help="Bob's private secret file")
 
+    sub.add_parser("factory-deploy", help="deploy the CREATE2 factory once (then set $PQ_FACTORY)")
+
+    cf = sub.add_parser("cf", help="counterfactual: fund a predicted address, collect with one self-paid deploy+sweep")
+    cf.add_argument("--factory", help="CREATE2 factory address (else $PQ_FACTORY)")
+    cf.add_argument("--seed", help="Bob's stealth seed (hex, 32 bytes); random if omitted")
+    add_amounts(cf)
+
     args = ap.parse_args()
     cmd = args.cmd or "auto"
     if cmd == "auto":
@@ -327,7 +406,8 @@ def main():
             args = ap.parse_args(["auto"])
         return cmd_auto(args)
     return {"bob-init": cmd_bob_init, "alice-pay": cmd_alice_pay,
-            "bob-sweep": cmd_bob_sweep}[cmd](args)
+            "bob-sweep": cmd_bob_sweep, "factory-deploy": cmd_factory_deploy,
+            "cf": cmd_cf}[cmd](args)
 
 
 if __name__ == "__main__":

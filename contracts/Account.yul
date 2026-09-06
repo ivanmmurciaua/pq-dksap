@@ -23,13 +23,22 @@ object "Account" {
     }
     object "runtime" {
         code {
-            // frame 0 (VERIFY): approve execution + payment, cheaply, then stop.
-            if iszero(verbatim_1i_1o(hex"b0", 0x0a)) {   // TXPARAM(current_frame_index) == 0
+            // The account runs on the two frames before the final SENDER: the
+            // VERIFY (cheap approve, 3rd from last) and the heavy DEFAULT verify
+            // (2nd from last). This holds for both shapes, so one artifact serves
+            // both:
+            //   3-frame spend        : VERIFY(0) DEFAULT(1) SENDER(2)
+            //   4-frame deploy+spend : DEPLOY(0) VERIFY(1) DEFAULT(2) SENDER(3)
+            let nframes := verbatim_1i_1o(hex"b0", 0x09)   // TXPARAM(frame count)
+            let idx := verbatim_1i_1o(hex"b0", 0x0a)       // TXPARAM(current_frame_index)
+
+            // VERIFY frame: approve execution + payment, cheaply, then stop.
+            if eq(idx, sub(nframes, 3)) {
                 verbatim_3i_0o(hex"aa", 0, 0, 3)         // APPROVE(offset=0, length=0, scope=3)
                 stop()
             }
 
-            // frame 1 (DEFAULT): heavy ML-DSA verification, revert-gated.
+            // DEFAULT frame (2nd from last): heavy ML-DSA verification, revert-gated.
             let SINGLETON := 0x06c03c98c9c6223787cc21ae0dd386312eb94813
             let PKLEN := 22400
             let SIGLEN := 2420
