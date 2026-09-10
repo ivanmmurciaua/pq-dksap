@@ -6,16 +6,16 @@ over an ML-KEM shared secret: the PAYER derives the stealth public key from the
 recipient's published meta-address (public inputs only) and so can compute the
 address but never spend; only the RECIPIENT, holding the spending secrets,
 forms the blinded signing key. This is the key-agreement / derivation layer the
-on-chain spend engine in `stealth.py` carries.
+onchain spend engine in `stealth.py` carries.
 
-The announcement transport (an on-chain ERC-5564 Announcer, an ERC-6538
+The announcement transport (an onchain ERC-5564 Announcer, an ERC-6538
 registry, or a scanner) is intentionally left to the caller: here the ML-KEM
-ciphertext is handed to the recipient off-chain. Registry + scanning are future
+ciphertext is handed to the recipient offchain. Registry + scanning are future
 work, not discarded.
 
 Credit: the blinded-ML-DSA construction is from the pq-sap project by Skas. This
 module re-expresses it over the Keccak-PRNG XOFs (rather than SHAKE) so blinded
-signatures verify under the same on-chain verifier the rest of this repo uses.
+signatures verify under the same onchain verifier the rest of this repo uses.
 """
 import hashlib
 from dataclasses import dataclass
@@ -151,8 +151,8 @@ def _derive_stealth_pk(meta_pub, ss):
 @dataclass
 class StealthTarget:
     stealth_pk: bytes   # packed ML-DSA public key of the blinded key
-    pk_deploy: bytes    # expanded pk the on-chain verifier consumes
-    commit: bytes       # keccak256(pk_deploy) — the account's key commitment
+    pk_deploy: bytes    # expanded pk the onchain verifier consumes
+    commit: bytes       # keccak256(pk_deploy), the account's key commitment
     kem_ct: bytes       # the announcement to deliver to the recipient
     view_tag: bytes
 
@@ -195,7 +195,7 @@ def sign_blinded(bkey, m: bytes, ctx: bytes = b"") -> bytes:
     """FIPS 204 signing over the widened-norm blinded key (s1+s', s2+e', t0'),
     on the Keccak profile. The rejection bounds use beta' = tau*2*eta; the
     verifier's bound is unchanged, so the signature is a standard ML-DSA
-    signature accepted by the stock (and on-chain) verifier."""
+    signature accepted by the stock (and onchain) verifier."""
     pk = bkey.stealth_pk
     rho = D._unpack_pk(pk)[0]
     A_hat = D._expand_matrix_from_seed(rho, _xof=XOF)

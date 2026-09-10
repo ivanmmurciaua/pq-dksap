@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PQ Stealth Payments</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module" src="js/main.js"></script>
+</head>
+<body>
+<header>
+  <h1>Post-Quantum Stealth Payments</h1>
+  <div class="sub">The payer pays the recipient through a one-time address derived from their meta-address.
+    Spend gated by <b>ML-DSA</b> verified onchain, key agreement over <b>ML-KEM</b>.</div>
+</header>
+
+<!--<div class="bar" id="bar">
+  <span class="chip">chain <b id="c-chain">…</b></span>
+  <span class="chip" id="chip-alice">payer <b id="c-alice">…</b></span>
+  <span class="chip" id="chip-bal">balance <b id="c-bal">…</b> ETH</span>
+  <span class="chip">factory <b id="c-fac">…</b></span>
+</div>-->
+
+<div id="connect" class="connect">
+  <div><b>Connect your wallet</b> on the ethrex Hegota devnet (chain 8141) to begin.
+    Vault deploy and withdraw are sponsored (gasless) when the backend runs a sponsor;
+    otherwise your wallet pays their gas.</div>
+  <button id="c-btn">Connect wallet</button>
+</div>
+<div id="wallet-bar" class="wbar" hidden>
+  <span class="pqdot" style="background:var(--ok)"></span>
+  <span>connected <b id="w-acct"></b> on Hegota</span>
+</div>
+
+<main>
+  <section class="panel bob">
+    <div class="role"></div>
+    <h2>Recipient</h2>
+    <button id="b-new">1 · Create my stealth identity</button>
+    <div id="b-info" class="kv" hidden>
+      <div><span class="k">handle </span><span class="v" id="b-handle"></span></div>
+      <div><span class="k">meta-address </span><span class="v" id="b-meta"></span> B (published)</div>
+    </div>
+    <button id="b-vault" disabled>1b · Create a new PQ smart wallet (required, keeps the payout post-quantum)</button>
+    <div class="vimport">
+      <input id="v-import-addr" class="txt" spellcheck="false" placeholder="or import a PQ smart wallet by address 0x…">
+      <button id="b-import" disabled>Import</button>
+    </div>
+    <div class="dim" style="margin-top:8px">Using a passkey on a new device? <a href="#" id="use-existing">Pick your existing passkey</a> first, so your smart wallets re-derive to the same addresses.</div>
+    <button id="b-collect" disabled>4 · Collect (one self-paid deploy + sweep)</button>
+    <div class="step">The recipient spends with a <b>blinded ML-DSA</b> key only they can form; the stealth account covers its own gas.</div>
+  </section>
+
+  <section class="panel alice">
+    <div class="role"></div>
+    <h2>Payer</h2>
+    <button id="a-derive" disabled>2 · Get the recipient's one-time address</button>
+    <div id="a-info" class="kv" hidden>
+      <div><span class="k">stealth address </span><span class="v addr" id="a-addr"></span></div>
+      <div class="hint" id="a-code"></div>
+    </div>
+    <div id="qr"></div>
+    <div class="hint" id="qr-hint" style="display:none">one-time address · send ETH here from any wallet</div>
+    <div id="deposit" class="deposit" hidden></div>
+    <button id="a-pay" disabled>3 · Pay 0.0001 ETH into it</button>
+    <div class="step">The payer derives the address from <b>public data only</b>; spending stays with the recipient's key alone.</div>
+  </section>
+</main>
+
+<div id="pq-phase" class="pqphase" hidden>
+  <span id="pq-dot" class="pqdot"></span><b id="pq-title"></b><span id="pq-note"></span>
+</div>
+
+<div class="banner" id="banner">
+  <div class="big">Paid through a post-quantum stealth address.</div>
+  <div class="kv"><span class="k">recipient received </span><span class="v" id="win-bal"></span> ETH
+    &nbsp;·&nbsp; <span class="k">deploy+sweep gas </span><span class="v" id="win-gas"></span>
+    &nbsp;·&nbsp; <span class="k">tx </span><span class="v" id="win-tx"></span></div>
+</div>
+
+<section id="vault-card" class="vault" hidden>
+  <h2>Your PQ smart wallet</h2>
+  <div class="dsub">A persistent, reusable post-quantum smart wallet. Funds here move only on an ML-DSA
+    signature, hard-enforced onchain in normal execution, so custody stays quantum-safe even
+    though the address is public and reused (this is what the one-time stealth cannot do).
+    Its ML-DSA key comes from a <b>passkey</b> (post-quantum: the key lives in your authenticator's
+    secure element), or, if no passkey supports it, from your wallet signature <b>plus a PIN</b>, so a
+    stolen or quantum-broken k1 key alone cannot spend it.</div>
+  <div class="kv" style="margin-top:10px">
+    <div><span class="k">address </span><span class="v addr" id="v-addr"></span> <span id="v-dep" class="dim"></span></div>
+    <div><span class="k">balance </span><span class="v" id="v-bal">…</span> ETH</div>
+  </div>
+  <div id="pin-row" class="vimport" hidden>
+    <input id="v-pin" class="txt" type="password" spellcheck="false" autocomplete="off"
+      placeholder="PIN or passphrase (6+ chars), protects the k1-fallback key">
+    <button id="v-pin-ok">OK</button>
+  </div>
+  <div class="vrow">
+    <button id="v-withdraw">Withdraw to a wallet (ML-DSA signed -> exits to classical)</button>
+    <button id="v-attack" class="danger">Try a plain withdraw (no ML-DSA signature)</button>
+  </div>
+  <div id="v-out" class="vout"></div>
+</section>
+
+<div class="out" id="out">Ready. Start with the recipient -> step 1.</div>
+
+<section class="decoder">
+  <h2>Transaction decoder</h2>
+  <div class="dsub">Paste any tx hash, or use one from this run, to see what a frame transaction actually is.</div>
+  <div class="drow">
+    <input id="d-hash" placeholder="0x… transaction hash" spellcheck="false">
+    <button id="d-go">Decode</button>
+  </div>
+  <div class="dquick">
+    <a href="#" id="q-fund">funding tx</a>
+    <a href="#" id="q-collect">deploy+sweep tx</a>
+  </div>
+  <div id="d-out"></div>
+</section>
+</body>
+</html>

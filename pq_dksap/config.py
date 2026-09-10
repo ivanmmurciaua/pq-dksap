@@ -15,11 +15,29 @@ SIG_LEN = 2420          # raw signature (cTilde || z || h)
 
 GAS_PRICE = 10 ** 8   # 0.1 gwei (baseFee on this chain is a few wei)
 
-# Repo-relative path to the compiled stealth account creation bytecode.
+# CREATE2 deployer for counterfactual stealth accounts. Deployed once per chain
+# (scripts/deploy_factory or demo `factory-deploy`); set PQ_FACTORY to reuse it.
+FACTORY = os.environ.get("PQ_FACTORY", "")
+
+# Repo-relative paths to the compiled bytecode.
 _HERE = os.path.dirname(__file__)
 ACCOUNT_BIN = os.path.join(_HERE, "..", "contracts", "Account.bin")
+FACTORY_BIN = os.path.join(_HERE, "..", "contracts", "Factory.bin")
+VAULT_BIN = os.path.join(_HERE, "..", "contracts", "Vault.bin")
+
+
+def _read_bin(path: str) -> bytes:
+    with open(path) as f:
+        return bytes.fromhex(f.read().strip())
 
 
 def account_creation_code() -> bytes:
-    with open(ACCOUNT_BIN) as f:
-        return bytes.fromhex(f.read().strip())
+    return _read_bin(ACCOUNT_BIN)
+
+
+def factory_creation_code() -> bytes:
+    return _read_bin(FACTORY_BIN)
+
+
+def vault_creation_code() -> bytes:
+    return _read_bin(VAULT_BIN)
