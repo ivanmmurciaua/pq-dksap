@@ -20,13 +20,13 @@ Two ways to run it:
 
 The dual-key protocol (see pq_dksap/dksap.py): Bob publishes a META-ADDRESS.
 Alice, from public data only, DERIVES a one-time stealth address and pays it,
-then hands Bob the ML-KEM ciphertext (the "announcement") OFF-CHAIN. Only Bob,
+then hands Bob the ML-KEM ciphertext (the "announcement") OFFCHAIN. Only Bob,
 with his spending secrets, can form the blinded ML-DSA key that sweeps it. On
-chain the two are unlinkable. Registry + on-chain scanning are future work.
+chain the two are unlinkable. Registry + onchain scanning are future work.
 
 Alice is whoever holds the funder key ($PQ_FUNDER_KEY or ./.funder_key) with
 test ETH from https://faucet.privacy.ethrex.xyz/ . The stealth SWEEP itself is
-pure ML-DSA verified on-chain, no ECDSA.
+pure ML-DSA verified onchain, no ECDSA.
 """
 import argparse
 import json
@@ -90,14 +90,14 @@ def rule(title):
 
 
 def sanity_verifier(pk_deploy, sig, h):
-    """Off-chain check that the shared singleton accepts this blinded signature."""
+    """Offchain check that the shared singleton accepts this blinded signature."""
     isel = keccak(text="verifyInline(bytes,bytes32,bytes)")[:4]
     dbg = isel + abi_encode(["bytes", "bytes32", "bytes"], [pk_deploy, h, sig])
     return rpc.eth_call({"to": SINGLETON, "data": "0x" + dbg.hex(), "gas": hex(50_000_000)})[:10]
 
 
 # --------------------------------------------------------------------------
-# Deploy + sweep primitives (the on-chain engine is unchanged)
+# Deploy + sweep primitives (the onchain engine is unchanged)
 # --------------------------------------------------------------------------
 def do_sweep(bkey, account, bob_wallet, amount):
     tx = stealth.build_spend(account, bob_wallet, amount)
@@ -259,7 +259,7 @@ def cmd_auto(args):
     print(f"  network      : ethrex Hegota privacy testnet  (chain {CHAIN_ID} / {hex(CHAIN_ID)})")
     print(f"  Alice (payer): {alice}   {eth(rpc.get_balance(alice))}")
     print(f"  Bob (wallet) : {bob_wallet}   [freshly generated]")
-    print(f"  verifier     : {SINGLETON}   [shared singleton, ML-DSA on-chain]")
+    print(f"  verifier     : {SINGLETON}   [shared singleton, ML-DSA onchain]")
 
     endow = args.amount + args.gas_allowance
     if rpc.get_balance(alice) < endow + 10 ** 16:
@@ -273,7 +273,7 @@ def cmd_auto(args):
     tgt = dksap.sender_derive(meta_pub_alice)
     print(f"  Alice (public data only) computes the stealth address, cannot spend it:")
     print(f"    stealth commit: 0x{tgt.commit.hex()}")
-    print(f"    announcement  : ML-KEM ct {len(tgt.kem_ct)} B (delivered to Bob off-chain)")
+    print(f"    announcement  : ML-KEM ct {len(tgt.kem_ct)} B (delivered to Bob offchain)")
     print(f"  Alice endows the stealth account with {eth(endow)}")
     print(f"    = {eth(args.amount)} payment + {eth(args.gas_allowance)} sweep-gas allowance")
     account, rc = stealth.deploy_account(alice_hex, alice, tgt, endow)
@@ -371,7 +371,7 @@ def main():
     def add_amounts(p):
         p.add_argument("--amount", type=int, default=10 ** 14, help="wei Alice pays Bob (default 0.0001 ETH)")
         p.add_argument("--gas-allowance", type=int, default=3 * 10 ** 15,
-                       help="extra wei to cover Bob's on-chain sweep gas (sponsored in production)")
+                       help="extra wei to cover Bob's onchain sweep gas (sponsored in production)")
 
     a = sub.add_parser("auto", help="run the whole DKSAP flow in one process (default)")
     add_amounts(a)

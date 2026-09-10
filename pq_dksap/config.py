@@ -23,6 +23,7 @@ FACTORY = os.environ.get("PQ_FACTORY", "")
 _HERE = os.path.dirname(__file__)
 ACCOUNT_BIN = os.path.join(_HERE, "..", "contracts", "Account.bin")
 FACTORY_BIN = os.path.join(_HERE, "..", "contracts", "Factory.bin")
+VAULT_BIN = os.path.join(_HERE, "..", "contracts", "Vault.bin")
 
 
 def _read_bin(path: str) -> bytes:
@@ -36,3 +37,7 @@ def account_creation_code() -> bytes:
 
 def factory_creation_code() -> bytes:
     return _read_bin(FACTORY_BIN)
+
+
+def vault_creation_code() -> bytes:
+    return _read_bin(VAULT_BIN)

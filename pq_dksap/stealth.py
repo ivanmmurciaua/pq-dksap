@@ -39,7 +39,7 @@ class StealthKey:
     pk: object
     sk: object
     pk_deploy: bytes
-    commit: bytes   # keccak256(pk_deploy) — the account's key commitment
+    commit: bytes   # keccak256(pk_deploy), the account's key commitment
 
     @classmethod
     def from_seed(cls, seed: bytes) -> "StealthKey":
@@ -165,7 +165,7 @@ def build_deploy_spend(factory: str, account: str, commit: bytes, dest: str, val
     return FrameTx(
         chain_id=CHAIN_ID, nonce=rpc.get_nonce(account), sender=account,
         frames=[
-            # TEMP gas split, to be tuned after the first on-chain measurement.
+            # TEMP gas split, to be tuned after the first onchain measurement.
             Frame(MODE_DEFAULT, FLAG_NONE, factory, *_DEPLOY_FRAMES_GAS[0], 0, deploy_data),
             Frame(MODE_VERIFY, FLAG_APPROVE_EXECUTION_AND_PAYMENT, None, *_DEPLOY_FRAMES_GAS[1], 0, b""),
             Frame(MODE_DEFAULT, FLAG_NONE, None, *_DEPLOY_FRAMES_GAS[2], 0, b""),

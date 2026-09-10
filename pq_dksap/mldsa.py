@@ -4,7 +4,7 @@ This is the signer that matches the deployed ZKNOX ETHDilithium verifier. It
 wraps the ZKNox `dilithium_py` reference implementation (install: see README).
 
 A stealth account is identified by a 32-byte seed. From it we derive:
-  - `pk_deploy`: the expanded public key the on-chain verifier consumes
+  - `pk_deploy`: the expanded public key the onchain verifier consumes
                  (abi.encode(bytes A_hat, bytes tr, bytes t1)), passed inline
   - the ability to sign a 32-byte message (the frame tx's sig_hash)
 """

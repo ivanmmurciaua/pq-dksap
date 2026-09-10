@@ -4,279 +4,119 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PQ Stealth Payments</title>
+<link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<style>
-  :root{
-    --bg:#0b0d12; --panel:#141821; --line:#232a37; --ink:#e8ecf3; --dim:#8a94a6;
-    --bob:#a78bfa; --alice:#2dd4bf; --ok:#34d399; --bad:#f87171; --chip:#1c2230;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
-    font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-  a{color:var(--alice)}
-  header{padding:22px 26px;border-bottom:1px solid var(--line)}
-  h1{margin:0;font-size:19px;letter-spacing:.3px}
-  .sub{color:var(--dim);margin-top:4px;font-size:12.5px}
-  .bar{display:flex;flex-wrap:wrap;gap:8px;padding:12px 26px;border-bottom:1px solid var(--line);
-    font-size:12px;color:var(--dim)}
-  .bar b{color:var(--ink);font-weight:600}
-  .chip{background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:3px 9px}
-  main{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:22px 26px;max-width:1040px}
-  @media(max-width:760px){main{grid-template-columns:1fr}}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 18px 20px}
-  .panel h2{margin:0 0 2px;font-size:14px}
-  .who{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim)}
-  .bob .who{color:var(--bob)} .alice .who{color:var(--alice)}
-  .panel .role{height:3px;border-radius:3px;margin:-2px -18px 14px;background:linear-gradient(90deg,transparent,currentColor,transparent)}
-  .bob .role{color:var(--bob)} .alice .role{color:var(--alice)}
-  .txt{width:100%;margin-top:12px;background:#0f131b;border:1px solid var(--line);border-radius:8px;
-    color:var(--ink);padding:9px 11px;font:inherit;font-size:12px}
-  .txt:focus{outline:none;border-color:var(--bob)}
-  .dim{color:var(--dim);font-size:11px}
-  button{width:100%;margin-top:12px;padding:11px 14px;border-radius:9px;border:1px solid var(--line);
-    background:#1a2130;color:var(--ink);font:inherit;font-weight:600;cursor:pointer;transition:.12s}
-  button:hover:not(:disabled){border-color:var(--alice)}
-  .bob button:hover:not(:disabled){border-color:var(--bob)}
-  button:disabled{opacity:.38;cursor:not-allowed}
-  .step{color:var(--dim);font-size:11px;margin-top:14px}
-  .kv{margin-top:10px;font-size:12px;word-break:break-all}
-  .kv .k{color:var(--dim)} .kv .v{color:var(--ink)}
-  .addr{color:var(--alice)}
-  #qr{margin:14px auto 10px;width:168px;background:#fff;padding:9px;border-radius:10px;
-    display:none;box-sizing:border-box;line-height:0}
-  #qr canvas{display:none!important}
-  #qr img{width:150px!important;height:150px!important;display:block!important;margin:0}
-  .hint{color:var(--dim);font-size:11px;text-align:center}
-  .out{margin:18px 26px;max-width:1040px;background:var(--panel);border:1px solid var(--line);
-    border-radius:12px;padding:14px 16px;font-size:12.5px;white-space:pre-wrap;color:var(--dim);min-height:20px}
-  .ok{color:var(--ok)} .bad{color:var(--bad)}
-  .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);
-    border-top-color:var(--alice);border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px}
-  @keyframes s{to{transform:rotate(360deg)}}
-  .banner{margin:0 26px 22px;max-width:1040px;border-radius:12px;padding:16px 18px;display:none;
-    border:1px solid var(--ok);background:rgba(52,211,153,.08)}
-  .banner .big{color:var(--ok);font-size:15px;font-weight:700}
-</style>
+<script type="module" src="js/main.js"></script>
 </head>
 <body>
 <header>
   <h1>Post-Quantum Stealth Payments</h1>
   <div class="sub">The payer pays the recipient through a one-time address derived from their meta-address.
-    Spend gated by <b>ML-DSA</b> verified on-chain, key agreement over <b>ML-KEM</b>.</div>
+    Spend gated by <b>ML-DSA</b> verified onchain, key agreement over <b>ML-KEM</b>.</div>
 </header>
 
-<div class="bar" id="bar">
+<!--<div class="bar" id="bar">
   <span class="chip">chain <b id="c-chain">…</b></span>
   <span class="chip" id="chip-alice">payer <b id="c-alice">…</b></span>
   <span class="chip" id="chip-bal">balance <b id="c-bal">…</b> ETH</span>
   <span class="chip">factory <b id="c-fac">…</b></span>
+</div>-->
+
+<div id="connect" class="connect">
+  <div><b>Connect your wallet</b> on the ethrex Hegota devnet (chain 8141) to begin.
+    Vault deploy and withdraw are sponsored (gasless) when the backend runs a sponsor;
+    otherwise your wallet pays their gas.</div>
+  <button id="c-btn">Connect wallet</button>
+</div>
+<div id="wallet-bar" class="wbar" hidden>
+  <span class="pqdot" style="background:var(--ok)"></span>
+  <span>connected <b id="w-acct"></b> on Hegota</span>
 </div>
 
 <main>
   <section class="panel bob">
     <div class="role"></div>
     <h2>Recipient</h2>
-    <input id="b-payout" class="txt" spellcheck="false" placeholder="your payout wallet 0x… (optional)">
-    <button id="b-new" onclick="bobNew()">1 · Create my stealth identity</button>
+    <button id="b-new">1 · Create my stealth identity</button>
     <div id="b-info" class="kv" hidden>
       <div><span class="k">handle </span><span class="v" id="b-handle"></span></div>
-      <div><span class="k">payout wallet </span><span class="v addr" id="b-wallet"></span> <span id="b-wtag" class="dim"></span></div>
       <div><span class="k">meta-address </span><span class="v" id="b-meta"></span> B (published)</div>
     </div>
-    <button id="b-collect" onclick="bobCollect()" disabled>4 · Collect (one self-paid deploy + sweep)</button>
+    <button id="b-vault" disabled>1b · Create a new PQ smart wallet (required, keeps the payout post-quantum)</button>
+    <div class="vimport">
+      <input id="v-import-addr" class="txt" spellcheck="false" placeholder="or import a PQ smart wallet by address 0x…">
+      <button id="b-import" disabled>Import</button>
+    </div>
+    <div class="dim" style="margin-top:8px">Using a passkey on a new device? <a href="#" id="use-existing">Pick your existing passkey</a> first, so your smart wallets re-derive to the same addresses.</div>
+    <button id="b-collect" disabled>4 · Collect (one self-paid deploy + sweep)</button>
     <div class="step">The recipient spends with a <b>blinded ML-DSA</b> key only they can form; the stealth account covers its own gas.</div>
   </section>
 
   <section class="panel alice">
     <div class="role"></div>
     <h2>Payer</h2>
-    <button id="a-derive" onclick="aliceDerive()" disabled>2 · Get the recipient's one-time address</button>
+    <button id="a-derive" disabled>2 · Get the recipient's one-time address</button>
     <div id="a-info" class="kv" hidden>
       <div><span class="k">stealth address </span><span class="v addr" id="a-addr"></span></div>
       <div class="hint" id="a-code"></div>
     </div>
     <div id="qr"></div>
     <div class="hint" id="qr-hint" style="display:none">one-time address · send ETH here from any wallet</div>
-    <button id="a-pay" onclick="alicePay()" disabled>3 · Pay 0.0001 ETH into it</button>
+    <div id="deposit" class="deposit" hidden></div>
+    <button id="a-pay" disabled>3 · Pay 0.0001 ETH into it</button>
     <div class="step">The payer derives the address from <b>public data only</b>; spending stays with the recipient's key alone.</div>
   </section>
 </main>
 
+<div id="pq-phase" class="pqphase" hidden>
+  <span id="pq-dot" class="pqdot"></span><b id="pq-title"></b><span id="pq-note"></span>
+</div>
+
 <div class="banner" id="banner">
-  <div class="big">✓ Paid through a post-quantum stealth address.</div>
+  <div class="big">Paid through a post-quantum stealth address.</div>
   <div class="kv"><span class="k">recipient received </span><span class="v" id="win-bal"></span> ETH
     &nbsp;·&nbsp; <span class="k">deploy+sweep gas </span><span class="v" id="win-gas"></span>
     &nbsp;·&nbsp; <span class="k">tx </span><span class="v" id="win-tx"></span></div>
 </div>
 
-<div class="out" id="out">Ready. Start with the recipient → step 1.</div>
+<section id="vault-card" class="vault" hidden>
+  <h2>Your PQ smart wallet</h2>
+  <div class="dsub">A persistent, reusable post-quantum smart wallet. Funds here move only on an ML-DSA
+    signature, hard-enforced onchain in normal execution, so custody stays quantum-safe even
+    though the address is public and reused (this is what the one-time stealth cannot do).
+    Its ML-DSA key comes from a <b>passkey</b> (post-quantum: the key lives in your authenticator's
+    secure element), or, if no passkey supports it, from your wallet signature <b>plus a PIN</b>, so a
+    stolen or quantum-broken k1 key alone cannot spend it.</div>
+  <div class="kv" style="margin-top:10px">
+    <div><span class="k">address </span><span class="v addr" id="v-addr"></span> <span id="v-dep" class="dim"></span></div>
+    <div><span class="k">balance </span><span class="v" id="v-bal">…</span> ETH</div>
+  </div>
+  <div id="pin-row" class="vimport" hidden>
+    <input id="v-pin" class="txt" type="password" spellcheck="false" autocomplete="off"
+      placeholder="PIN or passphrase (6+ chars), protects the k1-fallback key">
+    <button id="v-pin-ok">OK</button>
+  </div>
+  <div class="vrow">
+    <button id="v-withdraw">Withdraw to a wallet (ML-DSA signed -> exits to classical)</button>
+    <button id="v-attack" class="danger">Try a plain withdraw (no ML-DSA signature)</button>
+  </div>
+  <div id="v-out" class="vout"></div>
+</section>
+
+<div class="out" id="out">Ready. Start with the recipient -> step 1.</div>
 
 <section class="decoder">
   <h2>Transaction decoder</h2>
   <div class="dsub">Paste any tx hash, or use one from this run, to see what a frame transaction actually is.</div>
   <div class="drow">
     <input id="d-hash" placeholder="0x… transaction hash" spellcheck="false">
-    <button id="d-go" onclick="decodeTx()">Decode</button>
+    <button id="d-go">Decode</button>
   </div>
   <div class="dquick">
-    <a href="#" onclick="fillTx('fund');return false">↳ funding tx</a>
-    <a href="#" onclick="fillTx('collect');return false">↳ deploy+sweep tx</a>
+    <a href="#" id="q-fund">funding tx</a>
+    <a href="#" id="q-collect">deploy+sweep tx</a>
   </div>
   <div id="d-out"></div>
 </section>
-
-<style>
-  .decoder{margin:0 26px 30px;max-width:1040px;background:var(--panel);border:1px solid var(--line);
-    border-radius:12px;padding:18px}
-  .decoder h2{margin:0 0 2px;font-size:14px}
-  .dsub{color:var(--dim);font-size:12px;margin-bottom:12px}
-  .drow{display:flex;gap:8px}
-  .drow input{flex:1;background:#0f131b;border:1px solid var(--line);border-radius:8px;
-    color:var(--ink);padding:9px 11px;font:inherit;font-size:12px}
-  .drow button{width:auto;margin:0;padding:9px 18px}
-  .dquick{margin-top:8px;font-size:12px;display:flex;gap:16px}
-  .dsummary{margin:14px 0 6px;color:var(--dim);font-size:12.5px}
-  .dsummary b{color:var(--ink)}
-  .frame{border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-top:9px;background:#0f131b}
-  .frame .head{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .badge{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;padding:2px 8px;border-radius:5px;
-    border:1px solid var(--line)}
-  .b-deploy{color:var(--bob);border-color:var(--bob)}
-  .b-verify{color:#f5c451;border-color:#f5c451}
-  .b-mldsa-verify{color:var(--alice);border-color:var(--alice)}
-  .b-send{color:var(--ok);border-color:var(--ok)}
-  .fidx{color:var(--dim)} .fmeta{color:var(--dim);font-size:11.5px;margin-top:6px}
-  .fnote{font-size:12px;margin-top:7px;line-height:1.5}
-</style>
-
-<script>
-const $ = id => document.getElementById(id);
-const state = { handle:null, address:null };
-
-function log(msg, cls){ const o=$("out"); o.className="out"+(cls?" "+cls:""); o.textContent=msg; }
-function busy(btn, on){ btn.dataset.t = btn.dataset.t||btn.textContent;
-  btn.disabled=on; btn.innerHTML = on ? '<span class="spin"></span> working…' : btn.dataset.t; }
-async function api(path, body){
-  const r = await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(body||{})});
-  const j = await r.json(); if(!r.ok) throw new Error(j.error||("HTTP "+r.status)); return j;
-}
-const short = a => a ? a.slice(0,8)+"…"+a.slice(-6) : "";
-
-async function loadConfig(){
-  try{ const c = await api("/api/config");
-    $("c-chain").textContent = c.chain_id;
-    $("c-fac").textContent = c.factory ? short(c.factory) : "NONE — run factory-deploy";
-    if(c.pay_button){
-      $("c-alice").textContent = short(c.alice);
-      $("c-bal").textContent = c.alice_balance;
-    } else {
-      // external-payment mode: no funder key, so no payer chip and no Pay button.
-      $("chip-alice").hidden = true; $("chip-bal").hidden = true;
-      $("a-pay").hidden = true;
-    }
-  }catch(e){ log("config error: "+e.message,"bad"); }
-}
-
-async function bobNew(){
-  const btn=$("b-new"); busy(btn,true); log("The recipient generates an ML-DSA master key + an ML-KEM viewing key…");
-  try{ const r = await api("/api/bob/new",{payout:$("b-payout").value.trim()});
-    state.handle = r.handle;
-    $("b-handle").textContent = r.handle;
-    $("b-wallet").textContent = r.bob_wallet;
-    $("b-wtag").textContent = r.provided ? "(yours)" : "(demo wallet, regenerated each run)";
-    $("b-meta").textContent = r.meta_bytes;
-    $("b-info").hidden = false;
-    $("a-derive").disabled = false;
-    log("The recipient's meta-address is ready ("+r.meta_bytes+" B). Now the payer can derive a one-time address. → step 2","ok");
-  }catch(e){ log("error: "+e.message,"bad"); } finally{ busy(btn,false); }
-}
-
-async function aliceDerive(){
-  const btn=$("a-derive"); busy(btn,true); log("The payer runs blinded ML-DSA over an ML-KEM shared secret…");
-  try{ const r = await api("/api/alice/derive",{handle:state.handle});
-    state.address = r.stealth_address;
-    $("a-addr").textContent = r.stealth_address;
-    $("a-code").textContent = "CREATE2 address, awaiting its deploy ("+r.code+" B) · commit 0x"+r.commit.slice(0,12)+"…";
-    $("a-info").hidden = false;
-    $("qr").style.display="block"; $("qr").innerHTML="";
-    new QRCode($("qr"),{text:r.stealth_address,width:150,height:150,colorDark:"#0b0d12",colorLight:"#ffffff"});
-    $("qr-hint").style.display="block";
-    $("a-pay").disabled=false;
-    $("b-collect").disabled=false;
-    const payHint = $("a-pay").hidden
-      ? "Send ETH to it from any wallet (scan the QR), then collect (step 4)."
-      : "Pay with step 3, or send ETH to it from any wallet, then collect (step 4).";
-    log("The recipient's one-time address is ready. "+payHint,"ok");
-  }catch(e){ log("error: "+e.message,"bad"); } finally{ busy(btn,false); }
-}
-
-async function alicePay(){
-  const btn=$("a-pay"); busy(btn,true); log("The payer sends a plain transfer to the address, then walks away…");
-  try{ const r = await api("/api/alice/pay",{stealth_address:state.address});
-    if(!r.ok) throw new Error("funding reverted");
-    state.fundTx = r.tx;
-    $("b-collect").disabled=false;
-    log("Funded: the stealth address holds "+r.held+" ETH (block "+r.block+"). The recipient can now collect. → step 4","ok");
-  }catch(e){ log("error: "+e.message,"bad"); } finally{ busy(btn,false); }
-}
-
-async function bobCollect(){
-  const btn=$("b-collect"); busy(btn,true);
-  log("The recipient recovers the blinded key and sends ONE 0x06 tx that deploys the account AND sweeps.\nVerifying ML-DSA on-chain (~5.7M gas)… this waits for a block.");
-  try{ const r = await api("/api/bob/collect",{stealth_address:state.address});
-    state.collectTx = r.tx;
-    if(!r.ok) throw new Error("collect reverted (tx "+r.tx+")");
-    $("banner").style.display="block";
-    $("win-bal").textContent = r.bob_balance;
-    $("win-gas").textContent = r.gas.toLocaleString();
-    $("win-tx").textContent = short(r.tx);
-    log("Done. The account deployed ("+r.code+" B) and swept in one self-paid tx, covered by the stealth account itself.","ok");
-    $("c-bal").textContent = "—";
-  }catch(e){ log("error: "+e.message,"bad"); } finally{ busy(btn,false); }
-}
-
-function fillTx(which){
-  const h = which==="fund" ? state.fundTx : state.collectTx;
-  if(!h){ log("no "+which+" tx yet — run the flow first","bad"); return; }
-  $("d-hash").value = h; decodeTx();
-}
-
-function frameRow(f){
-  const money = f.value_eth>0 ? ` · <span class="ok">${f.value_eth.toFixed(6)} ETH</span>` : "";
-  const to = f.to ? f.to : "self (the account)";
-  return `<div class="frame">
-    <div class="head"><span class="fidx">#${f.index}</span>
-      <span class="badge b-${f.role}">${f.mode}</span>
-      <span style="color:var(--dim);font-size:12px">→ ${to}${money}</span></div>
-    <div class="fmeta">exec gas ${f.exec_gas.toLocaleString()} · state gas ${f.state_gas.toLocaleString()}${f.data_bytes?` · data ${f.data_bytes} B`:""}${f.scope!=="none"?` · ${f.scope}`:""}</div>
-    <div class="fnote">${f.note}</div></div>`;
-}
-
-async function decodeTx(){
-  const h=$("d-hash").value.trim(); if(!h) return;
-  const box=$("d-out"); box.innerHTML='<div class="dsummary"><span class="spin"></span> fetching…</div>';
-  try{ const d = await api("/api/decode",{tx:h});
-    if(!d.found){ box.innerHTML='<div class="dsummary bad">transaction not found</div>'; return; }
-    if(d.kind==="legacy"){
-      box.innerHTML=`<div class="dsummary">${d.summary}</div>
-        <div class="frame"><div class="head"><span class="badge">LEGACY ${d.type}</span>
-        <span style="color:var(--dim);font-size:12px">${d.from} → ${d.to} · <span class="ok">${d.value_eth.toFixed(6)} ETH</span></span></div>
-        <div class="fnote">A classic ECDSA-signed transfer that pre-funds the stealth address.</div></div>`;
-      return;
-    }
-    let html=`<div class="dsummary">${d.summary}</div>
-      <div class="fmeta">sender ${d.sender} · nonce ${d.nonce} · prefix: <b style="color:var(--ink)">${d.prefix_shape}</b></div>`;
-    html += d.frames.map(frameRow).join("");
-    d.signatures.forEach(s=>{ html+=`<div class="frame"><div class="head">
-      <span class="badge">SIG ${s.scheme}</span>
-      <span style="color:var(--dim);font-size:12px">${s.signature_bytes.toLocaleString()} B inline</span></div>
-      ${s.note?`<div class="fnote">${s.note}</div>`:""}</div>`; });
-    box.innerHTML=html;
-  }catch(e){ box.innerHTML='<div class="dsummary bad">error: '+e.message+'</div>'; }
-}
-
-loadConfig();
-</script>
 </body>
 </html>
